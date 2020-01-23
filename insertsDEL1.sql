@@ -52,10 +52,10 @@ VALUES
 
 TRUNCATE TABLE artwork;
 INSERT INTO artwork(artwork_title, artwork_price, artwork_creation_year, artwork_material_description, artwork_frame_description,
-	artwork_date_acquired, artwork_status, artwork_photo, artwork_copies, medium_name, size_category_name)
+	artwork_date_acquired, artwork_status, artwork_photo, artwork_copies, medium_name, size_category_name, artwork_size_depth, artwork_size_width, artwork_size_height)
 VALUES
-('Deplorables', 600, '2016', 'Fabric and polyfill', 'N/A', '2017-01-27', 'available', 'deplo.jpg', 2, 'Sculpture', 'medium'),
-('Low Tide', 700, '2019', 'Oil and acrylic on canvas diptych', 'N/A', '2020-01-10', 'on event', 'lowtide.jpg', 1, 'painting', 'oversized');
+('Deplorables', 600, '2016', 'Fabric and polyfill', 'N/A', '2017-01-27', 'available', 'deplo.jpg', 2, 'Sculpture', 'medium', 20, 10, 18),
+('Low Tide', 700, '2019', 'Oil and acrylic on canvas diptych', 'N/A', '2020-01-10', 'on event', 'lowtide.jpg', 1, 'painting', 'oversized', 20, 40, 18);
 
 TRUNCATE TABLE "EVENT";
 INSERT INTO "EVENT"(event_name, event_type, event_start_date, event_end_date, event_description)
