@@ -37,8 +37,88 @@ create or replace procedure CREATE_ARTIST_SP (
  p_country          IN VARCHAR          -- must not be NULL.
 )
 IS
+    l_display_name UA_ARTIST.artist_display_name%TYPE;
+    l_exst number(1);
+    ex_null_value EXCEPTION;
+    PRAGMA EXCEPTION_INIT( ex_null_value, -20001 );
+    ex_invalid_date EXCEPTION;
+    PRAGMA EXCEPTION_INIT( ex_invalid_date, -20002 );
+    ex_invalid_fk EXCEPTION;
+    PRAGMA EXCEPTION_INIT( ex_invalid_fk, -20003 );
 BEGIN
-    NULL;
+    l_display_name := p_display_name;
+    IF p_tax_id IS NULL THEN
+        raise_application_error(-20001, 'p_tax_id');
+    ELSIF l_display_name IS NULL THEN
+        l_display_name := p_given_name || p_surname;
+        IF l_display_name IS NULL THEN
+            raise_application_error(-20001, 'p_display_name');
+        END IF;
+    ELSIF p_street_1 IS NULL THEN
+        raise_application_error(-20001, 'p_street_1');
+    ELSIF p_city IS NULL THEN
+        raise_application_error(-20001, 'p_city');
+    ELSIF p_postal_code IS NULL THEN
+        raise_application_error(-20001, 'p_postal_code');
+    ELSIF p_country IS NULL THEN
+        raise_application_error(-20001, 'p_country');
+    ELSIF ( p_birth_year < 1900 OR p_birth_year > 2050 ) THEN
+        raise_application_error(-20002, p_birth_year);
+    ELSE
+        SELECT COUNT(*) 
+        INTO l_exst 
+        FROM ua_artist
+        WHERE artist_tax_id = p_tax_id;
+        
+        IF l_exst != 0 then 
+            raise_application_error( -20003, p_tax_id );
+        END IF;
+        
+        SELECT MAX(artist_id) + 1
+        INTO p_artist_id
+        FROM ua_artist;
+        
+        INSERT INTO ua_artist (
+            artist_id,
+            artist_tax_id,
+            artist_given_name,
+            artist_surname,
+            artist_display_name,
+            artist_birth_year,
+            artist_photo_url,
+            artist_biosketch,
+            artist_street_1,
+            artist_street_2,
+            artist_city,
+            artist_state_province,
+            artist_postal_code,
+            artist_country
+        ) VALUES (
+            p_artist_id,
+            p_tax_id,
+            p_given_name,
+            p_surname,
+            l_display_name,
+            p_birth_year,
+            p_photo_url,
+            p_biosketch,
+            p_street_1,
+            p_street_2,
+            p_city,
+            p_state_province,
+            p_postal_code,
+            p_country
+        );
+
+        COMMIT;
+    END IF;
+exception
+    When ex_null_value then
+        Dbms_output.put_line('Missing mandatory value for parameter ' || sqlerrm ||' in CREATE_ARTIST_SP.  No artist added.');
+    When ex_invalid_date then
+        Dbms_output.put_line('Invalid value ' || sqlerrm ||' for birth year in CREATE_ARTIST_SP.');
+    When ex_invalid_fk then
+        Dbms_output.put_line('Tax ID ' || sqlerrm ||' is already used.');
 END;
 /
 
