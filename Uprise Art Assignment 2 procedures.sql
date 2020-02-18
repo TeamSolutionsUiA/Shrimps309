@@ -19,7 +19,9 @@ ERROR MESSAGES:
     Error meaning:  Because the Tax ID must be unique, trying to insert a new artist with the same tax ID is not allowed.
     Error effect:  No new artist inserted into the UA_ARTIST table.  The value of p_artist_id is NULL.
 */
-
+/*create sequence atrist_seq 
+START WITH 52 
+INCREMENT BY 1;*/
 create or replace procedure CREATE_ARTIST_SP (
  p_artist_id        OUT INTEGER,        -- an output parameter
  p_tax_id           IN VARCHAR,         -- must not be NULL.  Must be UNIQUE.
@@ -37,6 +39,7 @@ create or replace procedure CREATE_ARTIST_SP (
  p_country          IN VARCHAR          -- must not be NULL.
 )
 IS
+    l_error varchar(20);
     l_display_name UA_ARTIST.artist_display_name%TYPE;
     l_exst number(1);
     ex_null_value EXCEPTION;
@@ -48,77 +51,91 @@ IS
 BEGIN
     l_display_name := p_display_name;
     IF p_tax_id IS NULL THEN
-        raise_application_error(-20001, 'p_tax_id');
+        l_error := 'p_tax_id';
+        raise ex_null_value;
+    ELSIF p_street_1 IS NULL THEN
+        l_error := 'p_street_1';
+        raise ex_null_value;
+    ELSIF p_city IS NULL THEN
+        l_error := 'p_city';
+        raise ex_null_value;
+    ELSIF p_postal_code IS NULL THEN
+        l_error := 'p_postal_code';
+        raise ex_null_value;
+    ELSIF p_country IS NULL THEN
+        l_error := 'p_postal_code';
+        raise ex_null_value;
+    ELSIF ( p_birth_year < 1900 OR p_birth_year > 2050 ) THEN
+        l_error := p_birth_year;
+        raise ex_invalid_date;
     ELSIF l_display_name IS NULL THEN
         l_display_name := p_given_name || p_surname;
         IF l_display_name IS NULL THEN
-            raise_application_error(-20001, 'p_display_name');
+            l_error := 'p_display_name';
+            raise ex_null_value;
         END IF;
-    ELSIF p_street_1 IS NULL THEN
-        raise_application_error(-20001, 'p_street_1');
-    ELSIF p_city IS NULL THEN
-        raise_application_error(-20001, 'p_city');
-    ELSIF p_postal_code IS NULL THEN
-        raise_application_error(-20001, 'p_postal_code');
-    ELSIF p_country IS NULL THEN
-        raise_application_error(-20001, 'p_country');
-    ELSIF ( p_birth_year < 1900 OR p_birth_year > 2050 ) THEN
-        raise_application_error(-20002, p_birth_year);
-    ELSE
-        SELECT COUNT(*) 
-        INTO l_exst 
-        FROM ua_artist
-        WHERE artist_tax_id = p_tax_id;
-        
-        IF l_exst != 0 then 
-            raise_application_error( -20003, p_tax_id );
-        END IF;
-        
-        SELECT MAX(artist_id) + 1
-        INTO p_artist_id
-        FROM ua_artist;
-        
-        INSERT INTO ua_artist (
-            artist_id,
-            artist_tax_id,
-            artist_given_name,
-            artist_surname,
-            artist_display_name,
-            artist_birth_year,
-            artist_photo_url,
-            artist_biosketch,
-            artist_street_1,
-            artist_street_2,
-            artist_city,
-            artist_state_province,
-            artist_postal_code,
-            artist_country
-        ) VALUES (
-            p_artist_id,
-            p_tax_id,
-            p_given_name,
-            p_surname,
-            l_display_name,
-            p_birth_year,
-            p_photo_url,
-            p_biosketch,
-            p_street_1,
-            p_street_2,
-            p_city,
-            p_state_province,
-            p_postal_code,
-            p_country
-        );
-
-        COMMIT;
     END IF;
-exception
-    When ex_null_value then
-        Dbms_output.put_line('Missing mandatory value for parameter ' || sqlerrm ||' in CREATE_ARTIST_SP.  No artist added.');
-    When ex_invalid_date then
-        Dbms_output.put_line('Invalid value ' || sqlerrm ||' for birth year in CREATE_ARTIST_SP.');
-    When ex_invalid_fk then
-        Dbms_output.put_line('Tax ID ' || sqlerrm ||' is already used.');
+
+    SELECT
+        COUNT(*)
+    INTO l_exst
+    FROM
+        ua_artist
+    WHERE
+        artist_tax_id = p_tax_id;
+
+    IF l_exst != 0 THEN
+        l_error := p_tax_id;
+        raise ex_invalid_fk;
+    END IF;
+    p_artist_id := atrist_seq.nextval;
+    
+    INSERT INTO ua_artist (
+        artist_id,
+        artist_tax_id,
+        artist_given_name,
+        artist_surname,
+        artist_display_name,
+        artist_birth_year,
+        artist_photo_url,
+        artist_biosketch,
+        artist_street_1,
+        artist_street_2,
+        artist_city,
+        artist_state_province,
+        artist_postal_code,
+        artist_country
+    ) VALUES (
+        p_artist_id,
+        p_tax_id,
+        p_given_name,
+        p_surname,
+        l_display_name,
+        p_birth_year,
+        p_photo_url,
+        p_biosketch,
+        p_street_1,
+        p_street_2,
+        p_city,
+        p_state_province,
+        p_postal_code,
+        p_country
+    );
+
+    COMMIT;
+EXCEPTION
+    WHEN ex_null_value THEN
+        dbms_output.put_line('Missing mandatory value for parameter '
+                             || l_error
+                             || ' in CREATE_ARTIST_SP.  No artist added.');
+    WHEN ex_invalid_date THEN
+        dbms_output.put_line('Invalid value '
+                             || l_error
+                             || ' for birth year in CREATE_ARTIST_SP.');
+    WHEN ex_invalid_fk THEN
+        dbms_output.put_line('Tax ID '
+                             || l_error
+                             || ' is already used.');
 END;
 /
 
