@@ -364,10 +364,69 @@ create or replace procedure create_collection_sp (
  p_create_date      IN DATE
 )
 IS
+test_exst UA_COLLECTION.COLLECTION_NAME%TYPE;
+ID_return UA_COLLECTION.COLLECTION_ID%TYPE;
+
+    NO_DATA_FOUND EXCEPTION;
+    PRAGMA EXCEPTION_INIT(NO_DATA_FOUND, -20001);
+    NAME_EXSIStS EXCEPTION;
+    PRAGMA EXCEPTION_INIT(NAME_EXSIStS, -20002);
+
 BEGIN
-    NULL;
+  -- no null values 
+    IF p_name IS NULL THEN
+        raise NO_DATA_FOUND;
+    ELSIF p_description IS NULL THEN
+        raise NO_DATA_FOUND;
+    ELSIF p_create_date IS NULL THEN
+        raise NO_DATA_FOUND;
+    END IF;
+-- Not same name
+    SELECT COUNT(*)
+    into test_exst
+    FROM
+     UA_COLLECTION
+    WHERE
+        COLLECTION_NAME = p_name;
+
+--not same name if
+    IF test_exst !=null THEN
+    raise NAME_EXSIStS;
+    END IF;
+  p_collection_id:=artist_seq.nextval;
+
+--insert
+    INSERT INTO UA_COLLECTION (
+    COLLECTION_ID,
+    COLLECTION_NAME,
+    COLLECTION_DESCRIPTION,
+    COLLECTION_CREATE_DATE
+    ) VALUES (
+    p_collection_id,
+    p_name,
+    p_description,
+    p_create_date
+    );
+    COMMIT;
+ -- ADD ID FOR the new colletion  
+    select COLLECTION_ID into ID_return
+    from UA_COLLECTION
+    where COLLECTION_NAME=p_name;
+ dbms_output.put_line('Colletion have been added whit the following id'||ID_return); 
+
+
+--Exception not wokring?
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+    dbms_output.put_line('Missing mandatory value for parameter'
+    ||'All data filed have too be filed'||'no data added');
+        
+    WHEN NAME_EXSIStS THEN
+    dbms_output.put_line('Missing mandatory value for parameter '
+    ||'COLLATION NAME IS ALLREADY IN USE'||'no data added. Please pick a diffrent name then:'||p_name);
+   
+
 END;
-/
 
 /*
 ADD_ART_COLLECTION_SP.  Add a work of art to a collection in the UA_ART_COLLECTION.  Given the identifier of a work of art 
@@ -405,14 +464,41 @@ part of a given collection, no action is taken.
        
 */
 create or replace procedure remove_art_collection_sp (
- p_collection_id IN INTEGER,             -- must not be NULL.
- p_artwork_id    IN INTEGER              -- must not be NULL.
+             -- must not be NULL.
+ p_artwork_id    UA_ART_COLLECTION.ARTWORK_ID%TYPE,              -- must not be NULL.
+ p_collection_name UA_COLLECTION.COLLECTION_NAME%TYPE
 )
 IS
+p_collection_id  UA_COLLECTION.COLLECTION_ID%TYPE;
+    
+NO_DATA_FOUND EXCEPTION;
+PRAGMA EXCEPTION_INIT(NO_DATA_FOUND, -20001);
+
 BEGIN
-    NULL;
+    IF p_collection_name IS NULL THEN
+        raise NO_DATA_FOUND;
+    ELSIF p_artwork_id IS NULL THEN
+        raise NO_DATA_FOUND;
+    END IF;   
+    
+    select COLLECTION_ID into p_collection_id
+    from UA_COLLECTION
+    where COLLECTION_NAME=p_collection_name;
+    
+    DELETE FROM UA_ART_COLLECTION
+    where p_collection_id = UA_ART_COLLECTION.COLLECTION_ID AND UA_ART_COLLECTION.ARTWORK_ID = p_artwork_id;
+    
+    
+-- DELETE
+   
+    dbms_output.put_line('ARTWORK Whit the follwing id '||p_artwork_id||' is removed from '||p_collection_name); 
+    
+    EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+    dbms_output.put_line('Missing mandatory value for parameter'||'All data filed have too be filed '||'no data Removed ');
+
+
 END;
-/
 
 /*
 ADD_INTEREST_SP.  Add an expression of interest. Given the identifier of a work of art, the name and email of the 
