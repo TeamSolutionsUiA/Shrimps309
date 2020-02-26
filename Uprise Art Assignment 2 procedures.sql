@@ -433,13 +433,92 @@ in the UA_INTEREST table.
 */
 
 create or replace procedure add_interest_sp (
+
  p_artwork_id       IN INTEGER,             -- must not be NULL.
  p_account_id       IN INTEGER,             -- must not be NULL.
  p_name             IN VARCHAR,
  p_email            IN VARCHAR
 )
 IS
+    l_artwork_exists        NUMBER(1);
+    l_account_exists        NUMBER(1);
+    l_interest_exists       NUMBER(1);
+    l_error                 VARCHAR(30);
+    
+    ex_null_value           EXCEPTION;
+    ex_artwork_not_found    EXCEPTION;
+    ex_account_not_found    EXCEPTION;
+    ex_interest_not_unique  EXCEPTION; -- To handle exceptions with not unique primary key.
+
+    PRAGMA EXCEPTION_INIT(ex_null_value, -20020);
+    PRAGMA EXCEPTION_INIT(ex_account_not_found, -20021);
+    PRAGMA EXCEPTION_INIT(ex_artwork_not_found, -20022); 
+    
 BEGIN
-    NULL;
+    -- Checking input parameters
+    IF p_artwork_id IS NULL THEN 
+        l_error := 'p_artwork_id';
+        raise ex_null_value;
+   
+    ELSIF p_account_id IS NULL THEN
+        l_error := 'p_account_id';
+        raise ex_null_value;
+    
+    END IF;
+    -- Checking if artwork and account exists in database.
+    SELECT COUNT(*) INTO l_artwork_exists
+    FROM ua_artwork
+    WHERE artwork_id = p_artwork_id;
+    
+    SELECT COUNT(*) INTO l_account_exists
+    FROM ua_account
+    WHERE account_id = p_account_id;
+    
+    -- Checking if this interest allready exists in database (extra check- not a part of assignment 2). 
+    SELECT COUNT(*) INTO l_interest_exists
+    FROM ua_interest
+    WHERE artwork_id = p_artwork_id AND account_id = p_account_id;
+    
+    IF l_artwork_exists = 0 THEN
+        l_error := 'p_artwork_id';
+        raise ex_artwork_not_found;
+    
+    ELSIF l_account_exists = 0 THEN
+        l_error := 'p_account';
+        raise ex_account_not_found;
+        
+    ELSIF l_interest_exists != 0 THEN
+        l_error := 'p_artwork_id/p_account_id';
+        raise ex_interest_not_unique;
+    END IF;
+    
+    INSERT INTO ua_interest (
+        interest_name,
+        interest_email,
+        artwork_id,
+        account_id
+        ) VALUES (
+            p_name,
+            p_email,
+            p_artwork_id,
+            p_account_id
+    );
+    COMMIT;
+
+EXCEPTION
+    WHEN ex_null_value THEN
+        dbms_output.put_line('Missing mandatory value for parameter: ' 
+                                || l_error
+                                || ' in ADD_INTEREST_SP.  No interest added.');
+    WHEN ex_artwork_not_found THEN 
+        dbms_output.put_line('Artwork: ' || p_artwork_id || ' was not found!');
+        
+    WHEN ex_account_not_found THEN
+        dbms_output.put_line('Artwork: ' || p_account_id || ' was not found!');
+        
+    WHEN ex_interest_not_unique THEN
+        dbms_output.put_line('Account: ' || p_account_id || ' is allready registered as interested in Artwork: '
+                                         || p_artwork_id);                           
+    
 END;
 /
