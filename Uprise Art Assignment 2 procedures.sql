@@ -127,14 +127,19 @@ EXCEPTION
         dbms_output.put_line('Missing mandatory value for parameter '
                              || l_error
                              || ' in CREATE_ARTIST_SP.  No artist added.');
+        ROLLBACK;
+        
     WHEN ex_invalid_date THEN
         dbms_output.put_line('Invalid value '
                              || l_error
                              || ' for birth year in CREATE_ARTIST_SP.');
+        ROLLBACK;
+        
     WHEN ex_invalid_uk THEN
         dbms_output.put_line('Tax ID '
                              || l_error
                              || ' is already used.');
+        ROLLBACK;                     
 END;
 /
 
@@ -329,25 +334,35 @@ BEGIN
 EXCEPTION
     WHEN ex_null_value THEN
         dbms_output.put_line('Missing mandatory value for parameter ' || l_error || ' in CREATE_ACCOUNT_SP. No account added.');
+        ROLLBACK;
     WHEN ex_no_matching_artist THEN
-        dbms_output.put_line('Invalid artist (' || l_error || ') in CREATE_ARTWORK_SP.'); 
+        dbms_output.put_line('Invalid artist (' || l_error || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_no_matching_medium THEN
         dbms_output.put_line('Invalid medium (' || l_error || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_invalid_creation_year THEN
-        dbms_output.put_line('Invalid creation year (' || p_creation_year || ') in CREATE_ARTWORK_SP.'); 
+        dbms_output.put_line('Invalid creation year (' || p_creation_year || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_date_not_in_past THEN
-        dbms_output.put_line('Invalid acquisition date (' || p_aquisition_date || ') in CREATE_ARTWORK_SP.'); 
+        dbms_output.put_line('Invalid acquisition date (' || p_aquisition_date || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_negative_num THEN
         dbms_output.put_line('All size parameters must be 0 or greater (or null) in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_invalid_size THEN
-        dbms_output.put_line('Invalid artwork size category (' || p_size_category || ') in CREATE_ARTWORK_SP.'); 
+        dbms_output.put_line('Invalid artwork size category (' || p_size_category || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     WHEN ex_invalid_status THEN
-        dbms_output.put_line('Invalid artwork status (' || p_status || ') in CREATE_ARTWORK_SP.'); 
+        dbms_output.put_line('Invalid artwork status (' || p_status || ') in CREATE_ARTWORK_SP.');
+        ROLLBACK;
     
     WHEN CHECK_CONSTRAINT_VIOLATED THEN
         dbms_output.put_line('INSERT failed due to check constraint violation');
+        ROLLBACK;
     WHEN OTHERS THEN                  
         dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
@@ -444,11 +459,15 @@ BEGIN
 EXCEPTION
     WHEN ex_null_value THEN
         dbms_output.put_line('Missing mandatory value for parameter ' || l_error || ' in CREATE_ACCOUNT_SP. No account added.'); 
+        ROLBACK;
+        
     WHEN ex_not_unique THEN
         dbms_output.put_line('Email ' || l_error || ' is already used ');
+        ROLLBACK;
     
     WHEN OTHERS THEN                  
         dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
@@ -547,8 +566,11 @@ BEGIN
             dbms_output.put_line('Missing mandatory value for parameter: ' 
                                 || l_error
                                 || ' in ADD_ADDRESS_SP.  No ADDRESS added.');
+            ROLLBACK;
+            
         WHEN ex_account_not_found THEN
             dbms_output.put_line('Account: ' || p_account_ID || ' was not found!');
+            ROLLBACK;
         
 END;
 /
@@ -631,10 +653,12 @@ EXCEPTION
     WHEN NO_DATA_FOUND THEN
     dbms_output.put_line('Missing mandatory value for parameter'
     ||'All data filed have too be filed'||'no data added');
+    ROLLBACK;
         
     WHEN NAME_EXSIStS THEN
     dbms_output.put_line('Missing mandatory value for parameter '
     ||'COLLATION NAME IS ALLREADY IN USE'||'no data added. Please pick a diffrent name then:'||p_name);
+    ROLLBACK;
    
 
 END;
@@ -715,14 +739,19 @@ EXCEPTION
         dbms_output.put_line('Missing mandatory value for parameter '
                              || l_error
                              || ' in ADD_ART_COLLECTION_SP.');
+        ROLLBACK;
+        
     WHEN ex_collection_not_found THEN
         dbms_output.put_line('Collection '
                              || l_error
                              || ' was not found.');
+        ROLLBACK;
+        
     WHEN ex_artwork_not_found THEN
         dbms_output.put_line('Artwork '
                              || l_error
                              || ' was not found.');
+        ROLLBACK;                     
 END;
 /
 
@@ -770,6 +799,7 @@ BEGIN
     EXCEPTION
     WHEN NO_DATA_FOUND THEN
     dbms_output.put_line('Missing mandatory value for parameter'||'All data filed have too be filed '||'no data Removed ');
+    ROLLBACK;
 
 
 END;
@@ -871,15 +901,20 @@ EXCEPTION
         dbms_output.put_line('Missing mandatory value for parameter: ' 
                                 || l_error
                                 || ' in ADD_INTEREST_SP.  No interest added.');
+        ROLLBACK;
+        
     WHEN ex_artwork_not_found THEN 
         dbms_output.put_line('Artwork: ' || p_artwork_id || ' was not found!');
+        ROLLBACK;
         
     WHEN ex_account_not_found THEN
         dbms_output.put_line('Artwork: ' || p_account_id || ' was not found!');
+        ROLLBACK;
         
     WHEN ex_interest_not_unique THEN
         dbms_output.put_line('Account: ' || p_account_id || ' is allready registered as interested in Artwork: '
-                                         || p_artwork_id);                           
+                                         || p_artwork_id);
+        ROLLBACK;                                 
     
 END;
 /
