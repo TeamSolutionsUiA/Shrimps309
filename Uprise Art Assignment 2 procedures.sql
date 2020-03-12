@@ -597,7 +597,7 @@ create or replace procedure create_collection_sp (
  p_create_date      IN DATE
 )
 IS
-test_exst UA_COLLECTION.COLLECTION_NAME%TYPE;
+test_exst number(1);
 ID_return UA_COLLECTION.COLLECTION_ID%TYPE;
 
     NO_DATA_FOUND EXCEPTION;
@@ -620,13 +620,13 @@ BEGIN
     FROM
      UA_COLLECTION
     WHERE
-        COLLECTION_NAME = p_name;
+       UA_COLLECTION.COLLECTION_NAME = p_name;
 
 --not same name if
-    IF test_exst !=null THEN
+    IF test_exst !=0 then
     raise NAME_EXSIStS;
     END IF;
-  p_collection_id:=artist_seq.nextval;
+    p_collection_id:=COLLECTION_SEQ.nextval;
 
 --insert
     INSERT INTO UA_COLLECTION (
@@ -658,10 +658,10 @@ EXCEPTION
     WHEN NAME_EXSIStS THEN
     dbms_output.put_line('Missing mandatory value for parameter '
     ||'COLLATION NAME IS ALLREADY IN USE'||'no data added. Please pick a diffrent name then:'||p_name);
-    ROLLBACK;
-   
+   ROLLBACK;
 
 END;
+/
 
 /*
 ADD_ART_COLLECTION_SP.  Add a work of art to a collection in the UA_ART_COLLECTION.  Given the identifier of a work of art 
@@ -766,44 +766,80 @@ part of a given collection, no action is taken.
     Error effect:  No change is made to the UA_ART_COLLECTION.  
        
 */
-create or replace procedure remove_art_collection_sp (
+create or replace procedure         remove_art_collection_sp (
              -- must not be NULL.
  p_artwork_id    UA_ART_COLLECTION.ARTWORK_ID%TYPE,              -- must not be NULL.
- p_collection_name UA_COLLECTION.COLLECTION_NAME%TYPE
+ p_collection_id  UA_COLLECTION.COLLECTION_ID%TYPE  --NOTE!!  This should be COLLECTION_ID, not _NAME
 )
 IS
-p_collection_id  UA_COLLECTION.COLLECTION_ID%TYPE;
-    
+p_collection_id_test  number(1);
+p_artwork_id_test    number(1);   
+p_artwork_id_in_collection_test    number(1);
 NO_DATA_FOUND EXCEPTION;
 PRAGMA EXCEPTION_INIT(NO_DATA_FOUND, -20001);
-
+COLLETCION_NOT_FOUND EXCEPTION;
+PRAGMA EXCEPTION_INIT(COLLETCION_NOT_FOUND, -20002);
+ARTWORK_NOT_FOUND EXCEPTION;
+PRAGMA EXCEPTION_INIT(ARTWORK_NOT_FOUND, -20003);
+ARTWORK_NOT_FOUND_IN_COLLECTION EXCEPTION;
+PRAGMA EXCEPTION_INIT(ARTWORK_NOT_FOUND, -20004);
 BEGIN
-    IF p_collection_name IS NULL THEN
+    IF p_collection_id IS NULL THEN
         raise NO_DATA_FOUND;
     ELSIF p_artwork_id IS NULL THEN
         raise NO_DATA_FOUND;
     END IF;   
     
-    select COLLECTION_ID into p_collection_id
+    select COUNT(*) into p_collection_id_test
     from UA_COLLECTION
-    where COLLECTION_NAME=p_collection_name;
+    where p_collection_id =COLLECTION_ID;
     
+    select COUNT(*) into p_artwork_id_test
+    from UA_ARTWORK
+    where p_artwork_id =ARTWORK_ID;
+    
+    select COUNT(*) into p_artwork_id_in_collection_test
+    from UA_ART_COLLECTION
+    where p_artwork_id =ARTWORK_ID AND p_collection_id =COLLECTION_ID;
+    
+    IF p_artwork_id_test =0 then
+    raise ARTWORK_NOT_FOUND;
+    END IF;
+    
+    
+    IF p_collection_id_test =0 then
+    raise COLLETCION_NOT_FOUND;
+    END IF;
+    
+    IF p_artwork_id_in_collection_test =0 then
+    raise ARTWORK_NOT_FOUND_IN_COLLECTION;
+    END IF;
     DELETE FROM UA_ART_COLLECTION
     where p_collection_id = UA_ART_COLLECTION.COLLECTION_ID AND UA_ART_COLLECTION.ARTWORK_ID = p_artwork_id;
     
     
 -- DELETE
    
-    dbms_output.put_line('ARTWORK Whit the follwing id '||p_artwork_id||' is removed from '||p_collection_name); 
+    dbms_output.put_line('ARTWORK Whit the follwing id '||p_artwork_id||' is removed from '||p_collection_id); 
     
     EXCEPTION
     WHEN NO_DATA_FOUND THEN
     dbms_output.put_line('Missing mandatory value for parameter'||'All data filed have too be filed '||'no data Removed ');
     ROLLBACK;
-
+    WHEN COLLETCION_NOT_FOUND THEN
+    dbms_output.put_line('Collection dose not exsist'||'no data Removed ');
+    ROLLBACK;
+   
+    WHEN ARTWORK_NOT_FOUND THEN
+    dbms_output.put_line('Artwork dose not exsist'||'no data Removed ');
+    ROLLBACK;
+    
+    WHEN ARTWORK_NOT_FOUND_IN_COLLECTION THEN
+    dbms_output.put_line('Artwork dose not exsist in collection'||'no data Removed ');
+    ROLLBACK;
 
 END;
-
+/
 
 /*
 ADD_INTEREST_SP.  Add an expression of interest. Given the identifier of a work of art, the name and email of the 
