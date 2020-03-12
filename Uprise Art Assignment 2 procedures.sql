@@ -87,7 +87,7 @@ BEGIN
         l_error := p_tax_id;
         raise ex_invalid_uk;
     END IF;
-    p_artist_id := atrist_seq.nextval;
+    p_artist_id := artist_seq.nextval;
     
     INSERT INTO ua_artist (
         artist_id,
@@ -139,7 +139,11 @@ EXCEPTION
         dbms_output.put_line('Tax ID '
                              || l_error
                              || ' is already used.');
-        ROLLBACK;                     
+        ROLLBACK;
+    
+    WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
@@ -361,7 +365,7 @@ EXCEPTION
         dbms_output.put_line('INSERT failed due to check constraint violation');
         ROLLBACK;
     WHEN OTHERS THEN                  
-        dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
         ROLLBACK;
 END;
 /
@@ -459,14 +463,14 @@ BEGIN
 EXCEPTION
     WHEN ex_null_value THEN
         dbms_output.put_line('Missing mandatory value for parameter ' || l_error || ' in CREATE_ACCOUNT_SP. No account added.'); 
-        ROLBACK;
+        ROLLBACK;
         
     WHEN ex_not_unique THEN
         dbms_output.put_line('Email ' || l_error || ' is already used ');
         ROLLBACK;
     
     WHEN OTHERS THEN                  
-        dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
         ROLLBACK;
 END;
 /
@@ -571,7 +575,10 @@ BEGIN
         WHEN ex_account_not_found THEN
             dbms_output.put_line('Account: ' || p_account_ID || ' was not found!');
             ROLLBACK;
-        
+            
+        WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;    
 END;
 /
 
@@ -651,14 +658,18 @@ BEGIN
 --Exception not wokring?
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
-    dbms_output.put_line('Missing mandatory value for parameter'
-    ||'All data filed have too be filed'||'no data added');
-    ROLLBACK;
+        dbms_output.put_line('Missing mandatory value for parameter'
+        ||'All data filed have too be filed'||'no data added');
+        ROLLBACK;
         
     WHEN NAME_EXSIStS THEN
-    dbms_output.put_line('Missing mandatory value for parameter '
-    ||'COLLATION NAME IS ALLREADY IN USE'||'no data added. Please pick a diffrent name then:'||p_name);
-   ROLLBACK;
+        dbms_output.put_line('Missing mandatory value for parameter '
+        ||'COLLATION NAME IS ALLREADY IN USE'||'no data added. Please pick a diffrent name then:'||p_name);
+        ROLLBACK;
+    
+    WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 
 END;
 /
@@ -751,7 +762,11 @@ EXCEPTION
         dbms_output.put_line('Artwork '
                              || l_error
                              || ' was not found.');
-        ROLLBACK;                     
+        ROLLBACK;
+        
+    WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 END;
 /
 
@@ -837,6 +852,10 @@ BEGIN
     WHEN ARTWORK_NOT_FOUND_IN_COLLECTION THEN
     dbms_output.put_line('Artwork dose not exsist in collection'||'no data Removed ');
     ROLLBACK;
+    
+    WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
 
 END;
 /
@@ -950,7 +969,11 @@ EXCEPTION
     WHEN ex_interest_not_unique THEN
         dbms_output.put_line('Account: ' || p_account_id || ' is allready registered as interested in Artwork: '
                                          || p_artwork_id);
-        ROLLBACK;                                 
+        ROLLBACK;
+        
+    WHEN OTHERS THEN                  
+        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;    
     
 END;
 /
