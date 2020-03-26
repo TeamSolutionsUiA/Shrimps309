@@ -608,12 +608,10 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         p_referred_by    IN   VARCHAR,
         p_artwork_loved  IN   VARCHAR
     ) IS
-
         l_error  VARCHAR(20);
         l_rows   NUMBER(1);
         ex_null_value EXCEPTION;
         ex_not_unique EXCEPTION;
-        
     BEGIN
     -- Input parameter checks:
         IF p_first_name IS NULL THEN
@@ -790,7 +788,6 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         p_description    IN   CLOB,
         p_create_date    IN   DATE
     ) IS
-
         test_exst  NUMBER(1);
         id_return  ua_collection.collection_id%TYPE;
         no_data_found EXCEPTION;
@@ -1487,7 +1484,7 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
     PROCEDURE report_sales_pp (
         p_start_date  IN  DATE,
         p_end_date    IN  DATE
-    ) IS 
+    ) IS
 
         CURSOR get_data_1 (
             x_start_date  IN DATE,
@@ -1539,7 +1536,6 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         l_total_sales  NUMBER;
         is_found_rec   BOOLEAN := false;
         ex_invalid_date EXCEPTION;
-
     BEGIN
     -- Error checks.
     -- Checking if dates is in chronological order:
