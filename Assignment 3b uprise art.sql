@@ -1453,11 +1453,14 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             dbms_output.put_line('Missing mandatory value for parameter ('
                                  || l_error
                                  || ') in CHECKOUT_PP.');
+            ROLLBACK;
+            
         WHEN OTHERS THEN
             dbms_output.put_line('Something else went wrong - '
                                  || sqlcode
                                  || ' : '
                                  || sqlerrm);
+            ROLLBACK;
     END view_cart_pp;
 
     PROCEDURE checkout_pp (
