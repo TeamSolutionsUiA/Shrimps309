@@ -1133,353 +1133,512 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             ROLLBACK;
     END add_interest_pp;
 
-procedure ADD_TO_CART_PP (
- p_artwork_id       IN INTEGER,     --NOT NULL
- p_account_id       IN INTEGER      --NOT NULL
-)
-IS
+    PROCEDURE add_to_cart_pp (
+        p_artwork_id  IN  INTEGER,     --NOT NULL
+        p_account_id  IN  INTEGER      --NOT NULL
+    ) IS
 
      --temp varibels
-    l_err_stg VARCHAR(20);
-    l_quantity_check NUMBER(4);
-    l_new_quantity NUMBER(4);
-    l_Status VARCHAR(20);
-    l_rows  NUMBER(1);
+
+        l_err_stg         VARCHAR(20);
+        l_quantity_check  NUMBER(4);
+        l_new_quantity    NUMBER(4);
+        l_status          VARCHAR(20);
+        l_rows            NUMBER(1);
     --Exseptions
-    EX_NULL_VALUE EXCEPTION;
-    EX_NOT_FOR_SALE EXCEPTION;
-    EX_NO_MATCH_ARTWORK EXCEPTION;
-    EX_NO_MATCH_ACCOUNT EXCEPTION;
-BEGIN
+        ex_null_value EXCEPTION;
+        ex_not_for_sale EXCEPTION;
+        ex_no_match_artwork EXCEPTION;
+        ex_no_match_account EXCEPTION;
+    BEGIN
         --No null values
-    IF p_artwork_id IS NULL THEN
-        l_err_stg := 'ARTWORK ID';
-        raise ex_null_value;
-    ELSIF p_account_id IS NULL THEN
-        l_err_stg := 'ACCOUNT ID';
-        raise ex_null_value;
-    END IF;
+        IF p_artwork_id IS NULL THEN
+            l_err_stg := 'ARTWORK ID';
+            RAISE ex_null_value;
+        ELSIF p_account_id IS NULL THEN
+            l_err_stg := 'ACCOUNT ID';
+            RAISE ex_null_value;
+        END IF;
     --ARTWORK EXSIST
-    l_rows :=0;
-    SELECT COUNT(*) 
-    INTO l_rows 
-    FROM UA_ARTWORK
-    WHERE ARTWORK_ID = p_artwork_id;
-    
-    IF l_rows = 0 THEN
-        l_err_stg := p_artwork_id;
-        raise EX_NO_MATCH_ARTWORK;
-    END IF;
-    l_rows :=0;
+
+        l_rows := 0;
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_artwork
+        WHERE
+            artwork_id = p_artwork_id;
+
+        IF l_rows = 0 THEN
+            l_err_stg := p_artwork_id;
+            RAISE ex_no_match_artwork;
+        END IF;
+        l_rows := 0;
     --ACCOUNT EXSIST
-    SELECT COUNT(*) 
-    INTO l_rows 
-    FROM UA_ACCOUNT
-    WHERE ACCOUNT_ID = p_account_id;
-    IF l_rows = 0 THEN
-        l_err_stg := p_account_id;
-        raise EX_NO_MATCH_ACCOUNT;
-    END IF;
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_account
+        WHERE
+            account_id = p_account_id;
+
+        IF l_rows = 0 THEN
+            l_err_stg := p_account_id;
+            RAISE ex_no_match_account;
+        END IF;
 
   -- Not quantity in stock
-    Select ARTWORK_QUANTITY_ON_HAND  into l_quantity_check
-    FROM UA_ARTWORK
-    where p_artwork_id = ARTWORK_ID;
+        SELECT
+            artwork_quantity_on_hand
+        INTO l_quantity_check
+        FROM
+            ua_artwork
+        WHERE
+            p_artwork_id = artwork_id;
 
     --for sale check
-    IF l_quantity_check <=0 THEN
-    RAISE EX_NOT_FOR_SALE;
 
-    Select ARTWORK_STATUS  into l_Status
-    FROM UA_ARTWORK
-    where p_artwork_id = ARTWORK_ID;
+        IF l_quantity_check <= 0 THEN
+            RAISE ex_not_for_sale;
+            SELECT
+                artwork_status
+            INTO l_status
+            FROM
+                ua_artwork
+            WHERE
+                p_artwork_id = artwork_id;
 
-    ELSIF l_Status != 'For sale' THEN
-    RAISE EX_NOT_FOR_SALE;
-
-    END IF;
+        ELSIF l_status != 'For sale' THEN
+            RAISE ex_not_for_sale;
+        END IF;
 
  --cart exsists
-     l_rows :=0;
-    SELECT COUNT(*)
-    into l_rows
-    FROM
-     UA_CART_ITEM
-    WHERE
-       ACCOUNT_ID =p_account_id AND ARTWORK_ID=p_artwork_id;
+
+        l_rows := 0;
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_cart_item
+        WHERE
+                account_id = p_account_id
+            AND artwork_id = p_artwork_id;
  --Insert
-    IF l_rows =0 THEN
-    
-    INSERT INTO UA_CART_ITEM (
-    ARTWORK_ID,
-    ACCOUNT_ID,
-    QUANTITY
-    )VALUES(
-    p_artwork_id,
-     p_account_id,
-    1
-    );
-    dbms_output.put_line('Work of art'||p_artwork_id||' addet to your cart');
-    ELSIF l_rows >0 then
-    
-    UPDATE UA_ARTWORK 
-    set ARTWORK_QUANTITY_ON_HAND = ARTWORK_QUANTITY_ON_HAND +1  
-    WHERE p_artwork_id = ARTWORK_ID;
-    dbms_output.put_line('on more of '||p_artwork_id||' addet to your cart');
-    END IF;
+
+        IF l_rows = 0 THEN
+            INSERT INTO ua_cart_item (
+                artwork_id,
+                account_id,
+                quantity
+            ) VALUES (
+                p_artwork_id,
+                p_account_id,
+                1
+            );
+
+            dbms_output.put_line('Work of art'
+                                 || p_artwork_id
+                                 || ' addet to your cart');
+        ELSIF l_rows > 0 THEN
+            UPDATE ua_artwork
+            SET
+                artwork_quantity_on_hand = artwork_quantity_on_hand + 1
+            WHERE
+                p_artwork_id = artwork_id;
+
+            dbms_output.put_line('on more of '
+                                 || p_artwork_id
+                                 || ' addet to your cart');
+        END IF;
 -- Reduce in stock number
-    Select ARTWORK_QUANTITY_ON_HAND  into l_new_quantity
-    FROM UA_ARTWORK
-    where p_artwork_id = ARTWORK_ID;
-    l_new_quantity :=l_new_quantity-l_quantity_check;
 
-   UPDATE UA_ARTWORK set ARTWORK_QUANTITY_ON_HAND = l_new_quantity  
-    WHERE p_artwork_id = ARTWORK_ID;
+        SELECT
+            artwork_quantity_on_hand
+        INTO l_new_quantity
+        FROM
+            ua_artwork
+        WHERE
+            p_artwork_id = artwork_id;
 
-    IF l_new_quantity =0 THEN
-     
-    UPDATE UA_ARTWORK set ARTWORK_STATUS = 'Sold out'  
-    WHERE p_artwork_id = ARTWORK_ID;
-    
-    
-    END IF;
-COMMIT;
+        l_new_quantity := l_new_quantity - l_quantity_check;
+        UPDATE ua_artwork
+        SET
+            artwork_quantity_on_hand = l_new_quantity
+        WHERE
+            p_artwork_id = artwork_id;
 
-EXCEPTION
-    WHEN EX_NULL_VALUE THEN
-    dbms_output.put_line('Missing mandatory value for parameter'||l_err_stg||'in ADD_TO_CART_PP. No artwork added to cart');
-        ROLLBACK;
-    WHEN EX_NOT_FOR_SALE THEN
-    dbms_output.put_line('Work of art '||p_account_id||' is not available. No artwork added to cart.');
-    ROLLBACK;
-    WHEN EX_NO_MATCH_ARTWORK THEN
-    dbms_output.put_line('Work of art '||l_err_stg||' not found.');
-    ROLLBACK;
-    WHEN EX_NO_MATCH_ACCOUNT THEN
-    dbms_output.put_line('ACCOUNT '||l_err_stg||' not found.');
-    ROLLBACK;
-    WHEN OTHERS THEN                  
-        dbms_output.put_line('Something went wrong - ' || SQLCODE || ' : ' || SQLERRM);
-        ROLLBACK;
-END ADD_TO_CART_PP;
+        IF l_new_quantity = 0 THEN
+            UPDATE ua_artwork
+            SET
+                artwork_status = 'Sold out'
+            WHERE
+                p_artwork_id = artwork_id;
 
-procedure REMOVE_FROM_CART_PP (
- p_artwork_id       IN INTEGER,     --NOT NULL
- p_account_id       IN INTEGER      --NOT NULL
-)
-IS
- l_err_stg VARCHAR(20);
- l_Cart_quantity NUMBER(4);
- l_new_quantity NUMBER(4);
- l_STATUS_CHECK VARCHAR(30);
- l_test_exst number(1);
+        END IF;
 
-  EX_NULL_VALUE EXCEPTION;
-  EX_CART_COMBINATION_NOT_EXSIT EXCEPTION;
-BEGIN
+        COMMIT;
+    EXCEPTION
+        WHEN ex_null_value THEN
+            dbms_output.put_line('Missing mandatory value for parameter'
+                                 || l_err_stg
+                                 || 'in ADD_TO_CART_PP. No artwork added to cart');
+            ROLLBACK;
+        WHEN ex_not_for_sale THEN
+            dbms_output.put_line('Work of art '
+                                 || p_account_id
+                                 || ' is not available. No artwork added to cart.');
+            ROLLBACK;
+        WHEN ex_no_match_artwork THEN
+            dbms_output.put_line('Work of art '
+                                 || l_err_stg
+                                 || ' not found.');
+            ROLLBACK;
+        WHEN ex_no_match_account THEN
+            dbms_output.put_line('ACCOUNT '
+                                 || l_err_stg
+                                 || ' not found.');
+            ROLLBACK;
+        WHEN OTHERS THEN
+            dbms_output.put_line('Something went wrong - '
+                                 || sqlcode
+                                 || ' : '
+                                 || sqlerrm);
+            ROLLBACK;
+    END add_to_cart_pp;
+
+    PROCEDURE remove_from_cart_pp (
+        p_artwork_id  IN  INTEGER,     --NOT NULL
+        p_account_id  IN  INTEGER      --NOT NULL
+    ) IS
+
+        l_err_stg        VARCHAR(20);
+        l_cart_quantity  NUMBER(4);
+        l_new_quantity   NUMBER(4);
+        l_status_check   VARCHAR(30);
+        l_test_exst      NUMBER(1);
+        ex_null_value EXCEPTION;
+        ex_cart_combination_not_exsit EXCEPTION;
+    BEGIN
 -- null check
- IF p_artwork_id IS NULL THEN
-        l_err_stg := 'ARTWORK ID';
-        raise ex_null_value;
-    ELSIF p_account_id IS NULL THEN
-        l_err_stg := 'ACCOUNT ID';
-        raise ex_null_value;
-    END IF;
+        IF p_artwork_id IS NULL THEN
+            l_err_stg := 'ARTWORK ID';
+            RAISE ex_null_value;
+        ELSIF p_account_id IS NULL THEN
+            l_err_stg := 'ACCOUNT ID';
+            RAISE ex_null_value;
+        END IF;
 --cart exsists
-  SELECT COUNT(*)
-    into l_test_exst
-    FROM
-     UA_CART_ITEM
-    WHERE
-       ACCOUNT_ID =p_account_id AND ARTWORK_ID=p_artwork_id;
 
-    IF l_test_exst =0 then
-    raise EX_CART_COMBINATION_NOT_EXSIT;
-    END IF;
+        SELECT
+            COUNT(*)
+        INTO l_test_exst
+        FROM
+            ua_cart_item
+        WHERE
+                account_id = p_account_id
+            AND artwork_id = p_artwork_id;
+
+        IF l_test_exst = 0 THEN
+            RAISE ex_cart_combination_not_exsit;
+        END IF;
 
 -- reset amount
-SELECT QUANTITY INTO l_Cart_quantity
-FROM UA_CART_ITEM
-WHERE ACCOUNT_ID = p_account_id AND ARTWORK_ID=p_artwork_id;
+        SELECT
+            quantity
+        INTO l_cart_quantity
+        FROM
+            ua_cart_item
+        WHERE
+                account_id = p_account_id
+            AND artwork_id = p_artwork_id;
 
-Select ARTWORK_QUANTITY_ON_HAND  into l_new_quantity
-FROM UA_ARTWORK
-where p_artwork_id = ARTWORK_ID;
-l_new_quantity :=l_new_quantity+l_Cart_quantity;
+        SELECT
+            artwork_quantity_on_hand
+        INTO l_new_quantity
+        FROM
+            ua_artwork
+        WHERE
+            p_artwork_id = artwork_id;
 
-UPDATE UA_ARTWORK set ARTWORK_QUANTITY_ON_HAND = l_new_quantity  
-WHERE p_artwork_id = ARTWORK_ID;
+        l_new_quantity := l_new_quantity + l_cart_quantity;
+        UPDATE ua_artwork
+        SET
+            artwork_quantity_on_hand = l_new_quantity
+        WHERE
+            p_artwork_id = artwork_id;
 -- remove statment
-DELETE FROM UA_CART_ITEM 
-WHERE ACCOUNT_ID = p_account_id AND ARTWORK_ID=p_artwork_id;
+
+        DELETE FROM ua_cart_item
+        WHERE
+                account_id = p_account_id
+            AND artwork_id = p_artwork_id;
 
 --status check
-Select ARTWORK_STATUS  into l_STATUS_CHECK
-FROM UA_ARTWORK
-where p_artwork_id = ARTWORK_ID;
 
- IF l_STATUS_CHECK !='Sold out' then
- UPDATE UA_ARTWORK set ARTWORK_STATUS = 'For sale'  
- WHERE p_artwork_id = ARTWORK_ID;
+        SELECT
+            artwork_status
+        INTO l_status_check
+        FROM
+            ua_artwork
+        WHERE
+            p_artwork_id = artwork_id;
 
- END IF;
- dbms_output.put_line('Work of art'||p_artwork_id||'Have been removed from your cart');
-COMMIT;
-EXCEPTION
- WHEN EX_NULL_VALUE THEN
-    dbms_output.put_line('Missing mandatory value for parameter'||l_err_stg||'in ADD_TO_CART_PP. No artwork added to cart');
-        ROLLBACK;
- WHEN EX_CART_COMBINATION_NOT_EXSIT THEN
-    dbms_output.put_line('The combination off item and user dose not exsist');
-        ROLLBACK;
-END REMOVE_FROM_CART_PP;
+        IF l_status_check != 'Sold out' THEN
+            UPDATE ua_artwork
+            SET
+                artwork_status = 'For sale'
+            WHERE
+                p_artwork_id = artwork_id;
 
-PROCEDURE VIEW_CART_PP (
-    p_account_id IN INTEGER      --NOT NULL
-) 
-IS
-    lv_price_sum NUMBER := 0;
-    lv_cnt NUMBER := 0;
-BEGIN
-    FOR i IN (
-        SELECT ua_artwork.artwork_title, ua_artwork.artwork_price, ua_artist.artist_display_name FROM ua_cart_item
-            
-            INNER JOIN ua_artwork
-                ON ua_artwork.artwork_id = ua_cart_item.artwork_id
-            INNER JOIN ua_artist
-                ON ua_artist.artist_id = ua_artwork.artist_id
-            WHERE account_id = p_account_id
-    )
-    LOOP
-        DBMS_OUTPUT.PUT_LINE(i.artwork_title || ' - $' || i.artwork_price || ' - Artist: ' || i.artist_display_name);
-        lv_price_sum := lv_price_sum + i.artwork_price;
-        lv_cnt := lv_cnt + 1;
-    END LOOP;
-    
-    DBMS_OUTPUT.PUT_LINE('Items in cart: ' || lv_cnt || ', sum: $' || lv_price_sum );
-END view_cart_pp;
+        END IF;
 
-PROCEDURE CHECKOUT_PP (
-    p_account_id            IN   INTEGER,         --NOT NULL
-    p_special_instructions  IN   VARCHAR,
-    p_billing_type          IN   VARCHAR,  --'Bank Wire', 'Check' or 'Credit Card'
-    p_payment_status        IN   VARCHAR,
-    p_shipping_address      IN   INTEGER,
-    p_billing_address       IN   INTEGER,         --NOT NULL
-    p_order_id              OUT  INTEGER
-)
-IS
-    cursor cur_cart_item is (
-        SELECT ua_artwork.artwork_id, ua_artwork.artwork_title, ua_artwork.artwork_price FROM ua_cart_item
-            INNER JOIN ua_artwork
-                ON ua_artwork.artwork_id = ua_cart_item.artwork_id
-            WHERE account_id = p_account_id
-    );
-    
-    lv_price_sum NUMBER := 0;
-    lv_cnt NUMBER := 0;
-    
-    l_rows NUMBER;
-    l_error VARCHAR(200);
-    ex_null_value EXCEPTION;
-    ex_empty_cart EXCEPTION;
-    ex_invalid_shipping_address EXCEPTION;
-    ex_invalid_billing_address EXCEPTION;
-    ex_invalid_billing_type EXCEPTION;
-BEGIN
+        dbms_output.put_line('Work of art'
+                             || p_artwork_id
+                             || 'Have been removed from your cart');
+        COMMIT;
+    EXCEPTION
+        WHEN ex_null_value THEN
+            dbms_output.put_line('Missing mandatory value for parameter'
+                                 || l_err_stg
+                                 || 'in ADD_TO_CART_PP. No artwork added to cart');
+            ROLLBACK;
+        WHEN ex_cart_combination_not_exsit THEN
+            dbms_output.put_line('The combination off item and user dose not exsist');
+            ROLLBACK;
+    END remove_from_cart_pp;
+
+    PROCEDURE view_cart_pp (
+        p_account_id IN INTEGER      --NOT NULL
+    ) IS
+
+        lv_price_sum  NUMBER := 0;
+        lv_cnt        NUMBER := 0;
+        l_error       VARCHAR(200);
+        ex_null_value EXCEPTION;
+    BEGIN
+        IF p_account_id IS NULL THEN
+            l_error := 'p_account_id';
+            RAISE ex_null_value;
+        END IF;
+        FOR i IN (
+            SELECT
+                ua_artwork.artwork_title,
+                ua_artwork.artwork_price,
+                ua_artist.artist_display_name
+            FROM
+                     ua_cart_item
+                INNER JOIN ua_artwork ON ua_artwork.artwork_id = ua_cart_item.artwork_id
+                INNER JOIN ua_artist ON ua_artist.artist_id = ua_artwork.artist_id
+            WHERE
+                account_id = p_account_id
+        ) LOOP
+            dbms_output.put_line(i.artwork_title
+                                 || ' - $'
+                                 || i.artwork_price
+                                 || ' - Artist: '
+                                 || i.artist_display_name);
+
+            lv_price_sum := lv_price_sum + i.artwork_price;
+            lv_cnt := lv_cnt + 1;
+        END LOOP;
+
+        dbms_output.put_line('Items in cart: '
+                             || lv_cnt
+                             || ', sum: $'
+                             || lv_price_sum);
+    EXCEPTION
+        WHEN ex_null_value THEN
+            dbms_output.put_line('Missing mandatory value for parameter ('
+                                 || l_error
+                                 || ') in CHECKOUT_PP.');
+        WHEN OTHERS THEN
+            dbms_output.put_line('Something else went wrong - '
+                                 || sqlcode
+                                 || ' : '
+                                 || sqlerrm);
+    END view_cart_pp;
+
+    PROCEDURE checkout_pp (
+        p_account_id            IN   INTEGER,         --NOT NULL
+        p_special_instructions  IN   VARCHAR,
+        p_billing_type          IN   VARCHAR,  --'Bank Wire', 'Check' or 'Credit Card'
+        p_payment_status        IN   VARCHAR,
+        p_shipping_address      IN   INTEGER,
+        p_billing_address       IN   INTEGER,         --NOT NULL
+        p_order_id              OUT  INTEGER
+    ) IS
+
+        CURSOR cur_cart_item IS
+        ( SELECT
+            ua_artwork.artwork_id,
+            ua_artwork.artwork_title,
+            ua_artwork.artwork_price
+        FROM
+                 ua_cart_item
+            INNER JOIN ua_artwork ON ua_artwork.artwork_id = ua_cart_item.artwork_id
+        WHERE
+            account_id = p_account_id
+        );
+
+        lv_price_sum  NUMBER := 0;
+        lv_cnt        NUMBER := 0;
+        l_rows        NUMBER;
+        l_error       VARCHAR(200);
+        ex_null_value EXCEPTION;
+        ex_empty_cart EXCEPTION;
+        ex_invalid_shipping_address EXCEPTION;
+        ex_invalid_billing_address EXCEPTION;
+        ex_invalid_billing_type EXCEPTION;
+    BEGIN
     -- validation
     -- ex_null_value
-    IF p_account_id IS NULL THEN
-        l_error := 'p_account_id';
-        raise ex_null_value;
-    END IF;
+        IF p_account_id IS NULL THEN
+            l_error := 'p_account_id';
+            RAISE ex_null_value;
+        END IF;
     
      -- get cart, sum up price to subtotal
-    FOR i IN cur_cart_item 
-    LOOP
-        lv_price_sum := lv_price_sum + i.artwork_price;
-        lv_cnt := lv_cnt + 1;
-    END LOOP;
-    IF lv_cnt < 1 THEN
-        l_error := '(' || p_account_id || ')';
-        raise ex_empty_cart;
-    END IF;
+        FOR i IN cur_cart_item LOOP
+            lv_price_sum := lv_price_sum + i.artwork_price;
+            lv_cnt := lv_cnt + 1;
+        END LOOP;
+
+        IF lv_cnt < 1 THEN
+            l_error := '('
+                       || p_account_id
+                       || ')';
+            RAISE ex_empty_cart;
+        END IF;
     
     -- ex_invalid_shipping_address
-    SELECT COUNT(*) INTO l_rows FROM ua_address
-    WHERE address_id = p_shipping_address;
-    IF l_rows != 1 THEN
-        l_error := p_shipping_address;
-        raise ex_invalid_shipping_address;
-    END IF;
+
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_address
+        WHERE
+            address_id = p_shipping_address;
+
+        IF l_rows != 1 THEN
+            l_error := p_shipping_address;
+            RAISE ex_invalid_shipping_address;
+        END IF;
     -- ex_invalid_billing_address
-    SELECT COUNT(*) INTO l_rows FROM ua_address
-    WHERE address_id = p_billing_address;
-    IF l_rows != 1 THEN
-        l_error := p_billing_address;
-        raise ex_invalid_billing_address;
-    END IF;
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_address
+        WHERE
+            address_id = p_billing_address;
+
+        IF l_rows != 1 THEN
+            l_error := p_billing_address;
+            RAISE ex_invalid_billing_address;
+        END IF;
     
     -- ex_invalid_billing_type
-    IF p_billing_type NOT IN ('Bank Wire', 'Check', 'Credit Card') THEN
-        l_error := p_billing_type;
-        raise ex_invalid_billing_type;
-    END IF;
-   
-    
-    
-    p_order_id := order_seq.nextval;
-    
-    INSERT INTO ua_order_transaction (order_id, order_date, order_subtotal, order_tax, order_shipping_cost, order_total, order_special_instructions, order_billing_type, order_payment_status, account_id, shipping_address_id, billing_address_id) 
-    VALUES(
-        p_order_id,
-        CURRENT_DATE,
-        lv_price_sum,                       --subtotal
-        lv_price_sum * 0.07,                -- order_tax,  
-        120, -- ????                        order_shipping_cost, 
-        lv_price_sum + (lv_price_sum * 0.07) + 120, -- order_total, 
-        p_special_instructions,             -- order_special_instructions, 
-        p_billing_type,                     -- order_billing_type, 
-        p_payment_status,                   -- order_payment_status, 
-        p_account_id,                       -- account_id, 
-        p_shipping_address,                 -- shipping_address_id, 
-        p_billing_address                   -- billing_address_id
-        
-    );
+        IF p_billing_type NOT IN (
+            'Bank Wire',
+            'Check',
+            'Credit Card'
+        ) THEN
+            l_error := p_billing_type;
+            RAISE ex_invalid_billing_type;
+        END IF;
+
+        p_order_id := order_seq.nextval;
+        INSERT INTO ua_order_transaction (
+            order_id,
+            order_date,
+            order_subtotal,
+            order_tax,
+            order_shipping_cost,
+            order_total,
+            order_special_instructions,
+            order_billing_type,
+            order_payment_status,
+            account_id,
+            shipping_address_id,
+            billing_address_id
+        ) VALUES (
+            p_order_id,
+            current_date,
+            lv_price_sum,                       --subtotal
+            lv_price_sum * 0.07,                -- order_tax,  
+            120, -- ????                        order_shipping_cost, 
+            lv_price_sum + ( lv_price_sum * 0.07 ) + 120, -- order_total, 
+            p_special_instructions,             -- order_special_instructions, 
+            p_billing_type,                     -- order_billing_type, 
+            p_payment_status,                   -- order_payment_status, 
+            p_account_id,                       -- account_id, 
+            p_shipping_address,                 -- shipping_address_id, 
+            p_billing_address                   -- billing_address_id
+        );
     
     -- create order details from cart
-    FOR i IN cur_cart_item 
-    LOOP
-        DBMS_OUTPUT.PUT_LINE(i.artwork_title || ' - $' || i.artwork_price);
-        INSERT INTO ua_order_detail (order_detail_id, order_id, artwork_id, order_detail_price)
-        VALUES (order_detail_seq.nextval, p_order_id,  i.artwork_id, i.artwork_price);
-        
-    END LOOP;
+
+        FOR i IN cur_cart_item LOOP
+            dbms_output.put_line(i.artwork_title
+                                 || ' - $'
+                                 || i.artwork_price);
+            INSERT INTO ua_order_detail (
+                order_detail_id,
+                order_id,
+                artwork_id,
+                order_detail_price
+            ) VALUES (
+                order_detail_seq.NEXTVAL,
+                p_order_id,
+                i.artwork_id,
+                i.artwork_price
+            );
+
+        END LOOP;
     
     --empty cart
-    DELETE FROM ua_cart_item WHERE account_id = p_account_id;
-    
-    COMMIT;
-EXCEPTION
-    WHEN ex_null_value THEN
-        dbms_output.put_line('Missing mandatory value for parameter (' || l_error || ') in CHECKOUT_PP.');
-        ROLLBACK;
-    WHEN ex_empty_cart THEN
-        dbms_output.put_line('No items in the shopping cart for account ' || l_error || '.');
-        ROLLBACK;
-    WHEN ex_invalid_shipping_address THEN
-        dbms_output.put_line('Shipping address (' || l_error || ') is not valid.');
-        ROLLBACK;
-    WHEN ex_invalid_billing_address THEN
-        dbms_output.put_line('Billing address (' || l_error || ') is not valid.');
-        ROLLBACK;
-    WHEN ex_invalid_billing_type THEN
-        dbms_output.put_line('Invalid billing type (' || l_error || ').');
-        ROLLBACK;   
-     WHEN OTHERS THEN                  
-        dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
-        ROLLBACK;
-END CHECKOUT_PP;
+
+        DELETE FROM ua_cart_item
+        WHERE
+            account_id = p_account_id;
+
+        COMMIT;
+    EXCEPTION
+        WHEN ex_null_value THEN
+            dbms_output.put_line('Missing mandatory value for parameter ('
+                                 || l_error
+                                 || ') in CHECKOUT_PP.');
+            ROLLBACK;
+        WHEN ex_empty_cart THEN
+            dbms_output.put_line('No items in the shopping cart for account '
+                                 || l_error
+                                 || '.');
+            ROLLBACK;
+        WHEN ex_invalid_shipping_address THEN
+            dbms_output.put_line('Shipping address ('
+                                 || l_error
+                                 || ') is not valid.');
+            ROLLBACK;
+        WHEN ex_invalid_billing_address THEN
+            dbms_output.put_line('Billing address ('
+                                 || l_error
+                                 || ') is not valid.');
+            ROLLBACK;
+        WHEN ex_invalid_billing_type THEN
+            dbms_output.put_line('Invalid billing type ('
+                                 || l_error
+                                 || ').');
+            ROLLBACK;
+        WHEN OTHERS THEN
+            dbms_output.put_line('Something else went wrong - '
+                                 || sqlcode
+                                 || ' : '
+                                 || sqlerrm);
+            ROLLBACK;
+    END checkout_pp;
 
     FUNCTION calc_total_sales_pf (
         p_artist_id IN INTEGER
