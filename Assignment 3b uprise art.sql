@@ -1359,18 +1359,127 @@ BEGIN
     DBMS_OUTPUT.PUT_LINE('Items in cart: ' || lv_cnt || ', sum: $' || lv_price_sum );
 END view_cart_pp;
 
-PROCEDURE checkout_pp (
-        p_account_id            IN   INTEGER,         --NOT NULL
-        p_special_instructions  IN   VARCHAR,
-        p_billing_type          IN   VARCHAR,
-        p_payment_status        IN   VARCHAR,
-        p_shipping_address      IN   INTEGER,
-        p_billing_address       IN   INTEGER,         --NOT NULL
-        p_order_id              OUT  INTEGER
-    ) IS
-    BEGIN
-        NULL;
-    END checkout_pp;
+PROCEDURE CHECKOUT_PP (
+    p_account_id            IN   INTEGER,         --NOT NULL
+    p_special_instructions  IN   VARCHAR,
+    p_billing_type          IN   VARCHAR,  --'Bank Wire', 'Check' or 'Credit Card'
+    p_payment_status        IN   VARCHAR,
+    p_shipping_address      IN   INTEGER,
+    p_billing_address       IN   INTEGER,         --NOT NULL
+    p_order_id              OUT  INTEGER
+)
+IS
+    cursor cur_cart_item is (
+        SELECT ua_artwork.artwork_id, ua_artwork.artwork_title, ua_artwork.artwork_price FROM ua_cart_item
+            INNER JOIN ua_artwork
+                ON ua_artwork.artwork_id = ua_cart_item.artwork_id
+            WHERE account_id = p_account_id
+    );
+    
+    lv_price_sum NUMBER := 0;
+    lv_cnt NUMBER := 0;
+    
+    l_rows NUMBER;
+    l_error VARCHAR(200);
+    ex_null_value EXCEPTION;
+    ex_empty_cart EXCEPTION;
+    ex_invalid_shipping_address EXCEPTION;
+    ex_invalid_billing_address EXCEPTION;
+    ex_invalid_billing_type EXCEPTION;
+BEGIN
+    -- validation
+    -- ex_null_value
+    IF p_account_id IS NULL THEN
+        l_error := 'p_account_id';
+        raise ex_null_value;
+    END IF;
+    
+     -- get cart, sum up price to subtotal
+    FOR i IN cur_cart_item 
+    LOOP
+        lv_price_sum := lv_price_sum + i.artwork_price;
+        lv_cnt := lv_cnt + 1;
+    END LOOP;
+    IF lv_cnt < 1 THEN
+        l_error := '(' || p_account_id || ')';
+        raise ex_empty_cart;
+    END IF;
+    
+    -- ex_invalid_shipping_address
+    SELECT COUNT(*) INTO l_rows FROM ua_address
+    WHERE address_id = p_shipping_address;
+    IF l_rows != 1 THEN
+        l_error := p_shipping_address;
+        raise ex_invalid_shipping_address;
+    END IF;
+    -- ex_invalid_billing_address
+    SELECT COUNT(*) INTO l_rows FROM ua_address
+    WHERE address_id = p_billing_address;
+    IF l_rows != 1 THEN
+        l_error := p_billing_address;
+        raise ex_invalid_billing_address;
+    END IF;
+    
+    -- ex_invalid_billing_type
+    IF p_billing_type NOT IN ('Bank Wire', 'Check', 'Credit Card') THEN
+        l_error := p_billing_type;
+        raise ex_invalid_billing_type;
+    END IF;
+   
+    
+    
+    p_order_id := order_seq.nextval;
+    
+    INSERT INTO ua_order_transaction (order_id, order_date, order_subtotal, order_tax, order_shipping_cost, order_total, order_special_instructions, order_billing_type, order_payment_status, account_id, shipping_address_id, billing_address_id) 
+    VALUES(
+        p_order_id,
+        CURRENT_DATE,
+        lv_price_sum,                       --subtotal
+        lv_price_sum * 0.07,                -- order_tax,  
+        120, -- ????                        order_shipping_cost, 
+        lv_price_sum + (lv_price_sum * 0.07) + 120, -- order_total, 
+        p_special_instructions,             -- order_special_instructions, 
+        p_billing_type,                     -- order_billing_type, 
+        p_payment_status,                   -- order_payment_status, 
+        p_account_id,                       -- account_id, 
+        p_shipping_address,                 -- shipping_address_id, 
+        p_billing_address                   -- billing_address_id
+        
+    );
+    
+    -- create order details from cart
+    FOR i IN cur_cart_item 
+    LOOP
+        DBMS_OUTPUT.PUT_LINE(i.artwork_title || ' - $' || i.artwork_price);
+        INSERT INTO ua_order_detail (order_detail_id, order_id, artwork_id, order_detail_price)
+        VALUES (order_detail_seq.nextval, p_order_id,  i.artwork_id, i.artwork_price);
+        
+    END LOOP;
+    
+    --empty cart
+    DELETE FROM ua_cart_item WHERE account_id = p_account_id;
+    
+    COMMIT;
+EXCEPTION
+    WHEN ex_null_value THEN
+        dbms_output.put_line('Missing mandatory value for parameter (' || l_error || ') in CHECKOUT_PP.');
+        ROLLBACK;
+    WHEN ex_empty_cart THEN
+        dbms_output.put_line('No items in the shopping cart for account ' || l_error || '.');
+        ROLLBACK;
+    WHEN ex_invalid_shipping_address THEN
+        dbms_output.put_line('Shipping address (' || l_error || ') is not valid.');
+        ROLLBACK;
+    WHEN ex_invalid_billing_address THEN
+        dbms_output.put_line('Billing address (' || l_error || ') is not valid.');
+        ROLLBACK;
+    WHEN ex_invalid_billing_type THEN
+        dbms_output.put_line('Invalid billing type (' || l_error || ').');
+        ROLLBACK;   
+     WHEN OTHERS THEN                  
+        dbms_output.put_line('Something else went wrong - ' || SQLCODE || ' : ' || SQLERRM);
+        ROLLBACK;
+END CHECKOUT_PP;
 
     FUNCTION calc_total_sales_pf (
         p_artist_id IN INTEGER
