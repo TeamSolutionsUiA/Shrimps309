@@ -25,6 +25,7 @@ EXTENT MANAGEMENT LOCAL UNIFORM SIZE 512K
 SEGMENT SPACE MANAGEMENT AUTO;
 
 --TASK 3
+--Move tables to correct tablespace
 ALTER TABLE ua_account MOVE
 PCTFREE 20
 STORAGE(INITIAL 6656K NEXT 512K)
@@ -94,6 +95,7 @@ TABLESPACE UA_512;
 -- checking tablespace status:
 SELECT table_name, index_name, status, tablespace_name FROM user_indexes;
 
+--Moving all indexes to new index table
 ALTER INDEX UA_ACCOUNT_PK
 REBUILD TABLESPACE indx;
 
@@ -144,4 +146,46 @@ REBUILD TABLESPACE indx;
 
 ALTER INDEX UA_ORDER_TRANSACTION_PK
 REBUILD TABLESPACE indx;
+
+--Task 5A:
+CREATE ROLE role_reader;
+GRANT CREATE SESSION, SELECT ANY TABLE TO role_reader;
+--     5B:
+CREATE ROLE role_uprise_art_admin;
+GRANT EXECUTE ON upriseart3B_pkg TO role_uprise_art_admin; 
+--     5C:
+-- Missing the Create_event procedure??!!
+CREATE ROLE role_artist_admin;
+GRANT EXECUTE ON upriseart3B_pkg.create_collection_pp, upriseart3B_pkg.create_artist_pp, 
+                upriseart3B_pkg.create_artwork_pp, upriseart3B_pkg.add_art_collection_pp TO role_artist_admin; 
+
+--Task 6:
+--Create default profile:
+CREATE PROFILE profile_default 
+LIMIT 
+   SESSIONS_PER_USER          5 
+   CPU_PER_SESSION            10000
+   IDLE_TIME                  30
+   CONNECT_TIME               720
+   CPU_PER_CALL               1000;
+
+CREATE USER shrimps_1
+IDENTIFIED BY shrimpspw
+DEFAULT TABLESPACE users
+QUOTA 0M ON users
+PROFILE profile_default;
+
+GRANT ROLE role_reader TO shrimps_1;
+
+CREATE USER shrimps_2
+IDENTIFIED BY shrimpspw2
+DEFAULT TABLESPACE users
+QUOTA 150M ON users
+PROFILE profile_default;
+
+GRANT ROLE role_uprise_art_admin TO shrimps_2;
+
+
+
+
 
