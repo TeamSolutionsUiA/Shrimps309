@@ -1489,13 +1489,11 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         l_rows              NUMBER;
         l_error             VARCHAR(200);
         l_shipping_address  NUMBER;
-        
-        ex_null_value               EXCEPTION;
-        ex_empty_cart               EXCEPTION;
+        ex_null_value EXCEPTION;
+        ex_empty_cart EXCEPTION;
         ex_invalid_shipping_address EXCEPTION;
-        ex_invalid_billing_address  EXCEPTION;
-        ex_invalid_billing_type     EXCEPTION;
-    
+        ex_invalid_billing_address EXCEPTION;
+        ex_invalid_billing_type EXCEPTION;
     BEGIN
     -- validation
     -- ex_null_value
@@ -1518,6 +1516,7 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         END IF;
     
     -- ex_invalid_billing_address
+
         SELECT
             COUNT(*)
         INTO l_rows
@@ -1530,10 +1529,9 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             l_error := p_billing_address;
             RAISE ex_invalid_billing_address;
         END IF;
-        
         IF p_shipping_address IS NULL THEN
             l_shipping_address := p_billing_address;
-        ELSE 
+        ELSE
             l_shipping_address := p_shipping_address;
         END IF;
    
