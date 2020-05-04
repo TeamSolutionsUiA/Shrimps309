@@ -1454,7 +1454,6 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
                                  || l_error
                                  || ') in CHECKOUT_PP.');
             ROLLBACK;
-            
         WHEN OTHERS THEN
             dbms_output.put_line('Something else went wrong - '
                                  || sqlcode
@@ -1515,20 +1514,6 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             RAISE ex_empty_cart;
         END IF;
     
-    -- ex_invalid_shipping_address
-
-        SELECT
-            COUNT(*)
-        INTO l_rows
-        FROM
-            ua_address
-        WHERE
-            address_id = p_shipping_address;
-
-        IF l_rows != 1 THEN
-            l_error := p_shipping_address;
-            RAISE ex_invalid_shipping_address;
-        END IF;
     -- ex_invalid_billing_address
         SELECT
             COUNT(*)
@@ -1542,7 +1527,26 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             l_error := p_billing_address;
             RAISE ex_invalid_billing_address;
         END IF;
-    
+        
+        IF p_shipping_address IS NULL THEN
+            p_shipping_address := p_billing_address;
+        END IF;
+   
+   -- ex_invalid_shipping_address
+
+        SELECT
+            COUNT(*)
+        INTO l_rows
+        FROM
+            ua_address
+        WHERE
+            address_id = p_shipping_address;
+
+        IF l_rows != 1 THEN
+            l_error := p_shipping_address;
+            RAISE ex_invalid_shipping_address;
+        END IF;
+        
     -- ex_invalid_billing_type
         IF p_billing_type NOT IN (
             'Bank Wire',
