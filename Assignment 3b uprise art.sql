@@ -1484,15 +1484,18 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             account_id = p_account_id
         );
 
-        lv_price_sum  NUMBER := 0;
-        lv_cnt        NUMBER := 0;
-        l_rows        NUMBER;
-        l_error       VARCHAR(200);
-        ex_null_value EXCEPTION;
-        ex_empty_cart EXCEPTION;
+        lv_price_sum        NUMBER := 0;
+        lv_cnt              NUMBER := 0;
+        l_rows              NUMBER;
+        l_error             VARCHAR(200);
+        l_shipping_address  NUMBER;
+        
+        ex_null_value               EXCEPTION;
+        ex_empty_cart               EXCEPTION;
         ex_invalid_shipping_address EXCEPTION;
-        ex_invalid_billing_address EXCEPTION;
-        ex_invalid_billing_type EXCEPTION;
+        ex_invalid_billing_address  EXCEPTION;
+        ex_invalid_billing_type     EXCEPTION;
+    
     BEGIN
     -- validation
     -- ex_null_value
@@ -1529,7 +1532,9 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         END IF;
         
         IF p_shipping_address IS NULL THEN
-            p_shipping_address := p_billing_address;
+            l_shipping_address := p_billing_address;
+        ELSE 
+            l_shipping_address := p_shipping_address;
         END IF;
    
    -- ex_invalid_shipping_address
@@ -1540,10 +1545,10 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
         FROM
             ua_address
         WHERE
-            address_id = p_shipping_address;
+            address_id = l_shipping_address;
 
         IF l_rows != 1 THEN
-            l_error := p_shipping_address;
+            l_error := l_shipping_address;
             RAISE ex_invalid_shipping_address;
         END IF;
         
@@ -1582,7 +1587,7 @@ CREATE OR REPLACE PACKAGE BODY upriseart3b_pkg IS
             p_billing_type,                     -- order_billing_type, 
             p_payment_status,                   -- order_payment_status, 
             p_account_id,                       -- account_id, 
-            p_shipping_address,                 -- shipping_address_id, 
+            l_shipping_address,                 -- shipping_address_id, 
             p_billing_address                   -- billing_address_id
         );
     
