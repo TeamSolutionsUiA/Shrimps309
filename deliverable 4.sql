@@ -159,9 +159,17 @@ SELECT table_name, index_name, status, tablespace_name FROM user_indexes;
 -- The status on all tables in index is now updated and valid.
 
 --Task 5A:
+-- Create reader role, with privileges to login and read all tables in shrimps schema.
 CREATE ROLE role_reader;
 GRANT CREATE SESSION TO role_reader;
-GRANT SELECT ANY TABLE TO role_reader;
+
+BEGIN
+    FOR o IN (SELECT * FROM user_tables)
+    LOOP
+        EXECUTE IMMEDIATE 'GRANT SELECT ON ' || o.table_name || ' TO role_reader';
+    END LOOP;
+END;
+
 --     5B:
 CREATE ROLE role_uprise_art_admin;
 GRANT EXECUTE ON upriseart3B_pkg TO role_uprise_art_admin; 
